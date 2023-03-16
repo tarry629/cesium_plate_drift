@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="./Cesium/Cesium.js"></script>
+    <link href="./Cesium/Widgets/widgets.css" rel="stylesheet">
+    <style>
+        html body {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="a">
+        <div class="topdiv"></div>
+    </div>
+    <script>
+        Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI2ZDgxYmE5Mi1hNjI4LTQ2YTQtOGRjZC0yODRkYWViZWFhN2UiLCJpZCI6MTAxNzM4LCJpYXQiOjE2NTgyMzIyMTl9.Wgfs3wI73L0mgZUYhWVPHerBeYfqDCnARolE_zGRvQo';
+        const all = './all_outline.json'
+        const pl = './polyline.json'
+        const plt = './plate.json'
+        const lb = './label.json'
+        const pb = './plate_border.json'
+        const pm = './province_pm.json'
+        // const point = './all_point.json'
+        const viewer = new Cesium.Viewer('a',
+            {
+                // shouldAnimate: true,
+            });
+        let julianDT = new Cesium.JulianDate();
+
+        // viewer.imageryLayers.removeAll();
+        // const imageryLayers = viewer.scene.imageryLayers;
+        const shp = Cesium.CzmlDataSource.load(pm)
+        const polyline = Cesium.CzmlDataSource.load(pl)
+        // const plate = Cesium.CzmlDataSource.load(plt)
+        const label = Cesium.CzmlDataSource.load(lb)
+        const plate_border = Cesium.CzmlDataSource.load(pb)
+        // const pt = Cesium.CzmlDataSource.load(point)
+        // viewer.dataSources.add(pt);
+        viewer.dataSources.add(shp);
+        viewer.dataSources.add(polyline);
+        // viewer.dataSources.add(plate);
+        viewer.dataSources.add(label);
+        viewer.dataSources.add(plate_border);
+        // viewer.dataSources.raiseToTop(pt);
+        // console.log(viewer.dataSources._dataSources)
+        viewer.zoomTo(plate_border)
+        var topdiv = document.querySelector('.topdiv');
+        var handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+        handler.setInputAction(function (movement) {
+            //获取鼠标位置，camera.pickEllipsoid()返回一个cartesian类型位置
+            let click_position = viewer.scene.camera.pickEllipsoid(movement.endPosition);
+            //位置数据转换只地理数据类型
+            let radiansPos = Cesium.Cartographic.fromCartesian(click_position);
+            //cesium函数转换至地理数据类型的经纬度    
+            let longitude_x = Cesium.Math.toDegrees(radiansPos.longitude);
+            let longitude_y = Cesium.Math.toDegrees(radiansPos.latitude);
+            //topDiv是html中的div
+            topdiv.innerHTML = "点击坐标的位置为" + longitude_x + "经度，" + longitude_y + "纬度";
+        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE)
+        //ScreenSpaceEventType
+        // viewer.clock.currentTime = Cesium.JulianDate.addSeconds(
+        //     Cesium.JulianDate.fromIso8601("2012-08-04T16:00:00Z"),
+        //     100,
+        //     julianDT
+        // );
+        // viewer.scene.globe.baseColor = Cesium.Color.GREY;
+        // var i = 100;
+        // var neighborhoodsPromise = Cesium.GeoJsonDataSource.load(
+        //     "./0.json"
+        // );
+
+        // 保存邻域数据的新实体集合
+        // var neighborhoods;
+
+        //当GeoJson文件加载成功后的操作
+        /* neighborhoodsPromise.then((dataSource) => {
+            // 将新数据作为实体添加到查看器
+            viewer.dataSources.add(dataSource);
+
+            //将实例保存到变量neighborhoods里
+            neighborhoods = dataSource.entities;
+
+            // 获取实例里的数据，是一个数组
+            var neighborhoodEntities = dataSource.entities.values;
+
+            //遍历这个数组以便对每一项进行样式配置，并且把这些数据放置到地形表面
+            for (var i = 0; i < neighborhoodEntities.length; i++) {
+                //每次循环到的数据都单独拿到
+                var entity = neighborhoodEntities[i];
+
+                //判断一下定义的多边形是否存在
+                if (Cesium.defined(entity.polygon)) {
+                    // 使用kml邻域值作为实体名称
+                    entity.name = entity.properties.neighborhood;
+
+                    // 将多边形材质设置为随机的半透明颜色
+                    entity.polygon.material = Cesium.Color.fromRandom({
+                        red: 0.1,
+                        maximumGreen: 0.5,
+                        minimumBlue: 0.5,
+                        alpha: 0.6,
+                    });
+
+                    // 告诉多边形为地形着色。 ClassificationType.CESIUM_3D_TILE 将为 3D 图块集着色，而 ClassificationType.BOTH 将为 3d 图块和地形着色（BOTH 是默认值）
+                    entity.polygon.classificationType = Cesium.ClassificationType.TERRAIN;
+
+                    // 生成多边形中心,意思就是设置这个多边形的位置
+                    var polyPositions = entity.polygon.hierarchy.getValue(
+                        Cesium.JulianDate.now()
+                    ).positions;
+                    // console.log(entity.polygon.hierarchy)
+
+                    // 上面生成中心点，这里进行配置中心点
+                    var polyCenter = Cesium.BoundingSphere.fromPoints(polyPositions).center;
+
+                    // 设置在地球的表面
+                    polyCenter = Cesium.Ellipsoid.WGS84.scaleToGeodeticSurface(polyCenter);
+                    entity.position = polyCenter;
+                    var latitude = Cesium.Math.toDegrees(polyPositions.latitude);
+                    var longitude = Cesium.Math.toDegrees(polyPositions.longitude);
+                    console.log(polyPositions.latitude, polyPositions.longitude);
+                    // console.log(polyCenter)
+                    // 生成每个多边形的标签
+                    entity.label = {
+                        text: entity.name,
+                        showBackground: true,
+                        scale: 0.6,
+                        //标签水平的位置
+                        horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+                        //标签垂直的位置
+                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                        //设置一下标签展示范围，摄像头高度
+                        distanceDisplayCondition: new Cesium.DistanceDisplayCondition(
+                            10.0,
+                            8000.0
+                        ),
+                        //超过这个范围标签就不能被点击
+                        disableDepthTestDistance: 100.0,
+                    };
+                }
+            }
+        });*/
+
+    </script>
+</body>
+
+</html>
