@@ -1,0 +1,4 @@
+# cesium_plate_drift
+用cesium做的一个板块移动的demo
+有一些CZML格式的json文件太大了就没有上传,代码里面删掉就可以了
+主要用的是cesium自带的动画功能实现的
